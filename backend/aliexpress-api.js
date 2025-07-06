@@ -25,8 +25,14 @@ class AliExpressAPI {
       .toUpperCase();
   }
 
-  // Search for products
-  async searchProducts(keywords, category = '', page = 1, pageSize = 20) {
+  // Search for products (access_token optional)
+  async searchProducts(
+    keywords,
+    category = '',
+    page = 1,
+    pageSize = 20,
+    access_token = null
+  ) {
     try {
       console.log('🚀 AliExpress API: Starting product search...');
 
@@ -58,6 +64,7 @@ class AliExpressAPI {
         target_currency: 'USD',
         target_language: 'EN',
       };
+      if (access_token) params.access_token = access_token;
 
       params.sign = this.generateSignature(params);
 
@@ -116,8 +123,8 @@ class AliExpressAPI {
     }
   }
 
-  // Get product details
-  async getProductDetails(productId) {
+  // Get product details (access_token optional)
+  async getProductDetails(productId, access_token = null) {
     try {
       const params = {
         method: 'aliexpress.ds.product.get',
@@ -130,6 +137,7 @@ class AliExpressAPI {
         target_currency: 'USD',
         target_language: 'EN',
       };
+      if (access_token) params.access_token = access_token;
 
       params.sign = this.generateSignature(params);
 
@@ -146,8 +154,8 @@ class AliExpressAPI {
     }
   }
 
-  // Get product images
-  async getProductImages(productId) {
+  // Get product images (access_token optional)
+  async getProductImages(productId, access_token = null) {
     try {
       const params = {
         method: 'aliexpress.ds.product.images.get',
@@ -158,6 +166,7 @@ class AliExpressAPI {
         sign_method: 'sha256',
         product_id: productId,
       };
+      if (access_token) params.access_token = access_token;
 
       params.sign = this.generateSignature(params);
 
@@ -174,7 +183,7 @@ class AliExpressAPI {
     }
   }
 
-  // Place order
+  // Place order (access_token required)
   async placeOrder(orderData) {
     try {
       const params = {
@@ -188,6 +197,7 @@ class AliExpressAPI {
         quantity: orderData.quantity,
         shipping_address: JSON.stringify(orderData.shippingAddress),
         buyer_message: orderData.buyerMessage || '',
+        access_token: orderData.access_token,
       };
 
       params.sign = this.generateSignature(params);
@@ -205,8 +215,8 @@ class AliExpressAPI {
     }
   }
 
-  // Get order status
-  async getOrderStatus(orderId) {
+  // Get order status (access_token required)
+  async getOrderStatus(orderId, access_token) {
     try {
       const params = {
         method: 'aliexpress.ds.trade.order.get',
@@ -216,6 +226,7 @@ class AliExpressAPI {
         v: '2.0',
         sign_method: 'sha256',
         order_id: orderId,
+        access_token,
       };
 
       params.sign = this.generateSignature(params);
@@ -233,17 +244,18 @@ class AliExpressAPI {
     }
   }
 
-  // Get tracking information
-  async getTrackingInfo(orderId) {
+  // Get tracking info (access_token required)
+  async getTrackingInfo(orderId, access_token) {
     try {
       const params = {
-        method: 'aliexpress.ds.trade.order.tracking.get',
+        method: 'aliexpress.ds.order.getlogisticsinfo',
         app_key: this.appKey,
         timestamp: new Date().toISOString(),
         format: 'json',
         v: '2.0',
         sign_method: 'sha256',
         order_id: orderId,
+        access_token,
       };
 
       params.sign = this.generateSignature(params);
@@ -254,8 +266,7 @@ class AliExpressAPI {
         throw new Error(response.data.error_response.msg);
       }
 
-      return response.data.aliexpress_ds_trade_order_tracking_get_response
-        .result;
+      return response.data.aliexpress_ds_order_getlogisticsinfo_response.result;
     } catch (error) {
       console.error('Error getting tracking info:', error);
       throw error;

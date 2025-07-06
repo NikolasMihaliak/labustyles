@@ -221,6 +221,71 @@ const categories = {
   },
 };
 
+// In-memory store for user access tokens (for demo; use DB in production)
+const userTokens = {};
+
+// AliExpress OAuth 2.0 endpoints
+const APP_KEY = process.env.ALIEXPRESS_APP_KEY;
+const APP_SECRET = process.env.ALIEXPRESS_APP_SECRET;
+const REDIRECT_URI =
+  process.env.ALIEXPRESS_REDIRECT_URI ||
+  'https://labustyles.onrender.com/auth/callback';
+
+// 1. Redirect user to AliExpress for authorization
+app.get('/auth/redirect', (req, res) => {
+  const state = Math.random().toString(36).substring(2, 15); // random state for CSRF protection
+  const authUrl = `https://auth.aliexpress.com/oauth2/authorize?app_id=${APP_KEY}&redirect_uri=${encodeURIComponent(
+    REDIRECT_URI
+  )}&site=aliexpress&state=${state}`;
+  res.redirect(authUrl);
+});
+
+// 2. Handle OAuth callback and exchange code for access token
+app.get('/auth/callback', async (req, res) => {
+  const { code, state } = req.query;
+  if (!code) {
+    return res.status(400).send('Missing code');
+  }
+  try {
+    const axios = require('axios');
+    const tokenRes = await axios.post(
+      'https://api.aliexpress.com/token',
+      null,
+      {
+        params: {
+          grant_type: 'authorization_code',
+          code,
+          client_id: APP_KEY,
+          client_secret: APP_SECRET,
+          redirect_uri: REDIRECT_URI,
+        },
+      }
+    );
+    const { access_token, refresh_token, expires_in, user_id } = tokenRes.data;
+    // Store token in-memory (keyed by user_id)
+    userTokens[user_id] = {
+      access_token,
+      refresh_token,
+      expires_in,
+      obtained: Date.now(),
+    };
+    res.send('AliExpress authorization successful! You can now place orders.');
+  } catch (error) {
+    console.error(
+      'OAuth callback error:',
+      error.response?.data || error.message
+    );
+    res.status(500).send('Failed to obtain access token.');
+  }
+});
+
+// Helper: Get access token for a user (for demo, just use the first one)
+function getAnyAccessToken() {
+  const ids = Object.keys(userTokens);
+  if (ids.length === 0) return null;
+  return userTokens[ids[0]].access_token;
+}
+
 // API Routes
 
 // Get all categories
@@ -431,12 +496,11 @@ app.get('/api/products/search', async (req, res) => {
 app.get('/api/products/:productId', async (req, res) => {
   try {
     const { productId } = req.params;
-
+    const access_token = getAnyAccessToken();
     const [productDetails, productImages] = await Promise.all([
-      aliexpressAPI.getProductDetails(productId),
-      aliexpressAPI.getProductImages(productId),
+      aliexpressAPI.getProductDetails(productId, access_token),
+      aliexpressAPI.getProductImages(productId, access_token),
     ]);
-
     res.json({
       success: true,
       product: {
@@ -454,23 +518,30 @@ app.get('/api/products/:productId', async (req, res) => {
 app.post('/api/orders', async (req, res) => {
   try {
     const { productId, quantity, shippingAddress, buyerMessage } = req.body;
-
     if (!productId || !quantity || !shippingAddress) {
       return res.status(400).json({
         success: false,
         error: 'Missing required fields',
       });
     }
-
+    // Get access token (in real app, use user session)
+    const access_token = getAnyAccessToken();
+    if (!access_token) {
+      return res
+        .status(401)
+        .json({
+          success: false,
+          error: 'AliExpress not authorized. Please connect your account.',
+        });
+    }
     const orderData = {
       productId,
       quantity: parseInt(quantity),
       shippingAddress,
       buyerMessage: buyerMessage || '',
+      access_token,
     };
-
     const result = await aliexpressAPI.placeOrder(orderData);
-
     res.json({
       success: true,
       order: result,
@@ -486,9 +557,16 @@ app.post('/api/orders', async (req, res) => {
 app.get('/api/orders/:orderId', async (req, res) => {
   try {
     const { orderId } = req.params;
-
-    const result = await aliexpressAPI.getOrderStatus(orderId);
-
+    const access_token = getAnyAccessToken();
+    if (!access_token) {
+      return res
+        .status(401)
+        .json({
+          success: false,
+          error: 'AliExpress not authorized. Please connect your account.',
+        });
+    }
+    const result = await aliexpressAPI.getOrderStatus(orderId, access_token);
     res.json({
       success: true,
       order: result,
@@ -503,9 +581,16 @@ app.get('/api/orders/:orderId', async (req, res) => {
 app.get('/api/orders/:orderId/tracking', async (req, res) => {
   try {
     const { orderId } = req.params;
-
-    const result = await aliexpressAPI.getTrackingInfo(orderId);
-
+    const access_token = getAnyAccessToken();
+    if (!access_token) {
+      return res
+        .status(401)
+        .json({
+          success: false,
+          error: 'AliExpress not authorized. Please connect your account.',
+        });
+    }
+    const result = await aliexpressAPI.getTrackingInfo(orderId, access_token);
     res.json({
       success: true,
       tracking: result,
