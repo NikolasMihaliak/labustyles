@@ -16,9 +16,11 @@ const aliexpressAPI = new AliExpressAPI(
 );
 
 // Check if AliExpress credentials are configured
-const hasAliExpressCredentials =
-  process.env.ALIEXPRESS_APP_KEY && process.env.ALIEXPRESS_APP_SECRET;
-if (!hasAliExpressCredentials) {
+const hasAliExpressCredentials = () => {
+  return process.env.ALIEXPRESS_APP_KEY && process.env.ALIEXPRESS_APP_SECRET;
+};
+
+if (!hasAliExpressCredentials()) {
   console.warn(
     '⚠️  AliExpress credentials not found. Add ALIEXPRESS_APP_KEY and ALIEXPRESS_APP_SECRET environment variables.'
   );
@@ -250,7 +252,7 @@ app.get('/api/products/category/:category', async (req, res) => {
     }
 
     // Check if AliExpress credentials are available
-    if (!hasAliExpressCredentials) {
+    if (!hasAliExpressCredentials()) {
       console.log('Using mock data - AliExpress credentials not configured');
       const mockData = mockProducts[category] || [];
       return res.json({
@@ -328,7 +330,7 @@ app.get('/api/products/search', async (req, res) => {
     }
 
     // Check if AliExpress credentials are available
-    if (!hasAliExpressCredentials) {
+    if (!hasAliExpressCredentials()) {
       console.log(
         'Using mock data for search - AliExpress credentials not configured'
       );
