@@ -209,6 +209,28 @@ html, body {
   border-color: #42a5f5;
 }
 
+.season-btn.luxury {
+  background: #fff8e1;
+  color: #f57f17;
+  border-color: #ffd54f;
+}
+.season-btn.luxury:hover, .season-btn.luxury.active {
+  background: #ffecb3;
+  color: #e65100;
+  border-color: #ffb300;
+}
+
+.season-btn.labubu {
+  background: #e8f5e8;
+  color: #2e7d32;
+  border-color: #a5d6a7;
+}
+.season-btn.labubu:hover, .season-btn.labubu.active {
+  background: #c8e6c9;
+  color: #1b5e20;
+  border-color: #81c784;
+}
+
 .season-btn.all {
   background: #fafdff;
   color: #4f8cff;

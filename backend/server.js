@@ -12,33 +12,44 @@ app.use(express.json());
 // Initialize AliExpress API
 const aliexpressAPI = new AliExpressAPI(
   process.env.ALIEXPRESS_APP_KEY,
-  process.env.ALIEXPRESS_APP_SECRET,
-  process.env.ALIEXPRESS_ACCESS_TOKEN
+  process.env.ALIEXPRESS_APP_SECRET
 );
 
 // Product Categories for LabuStyles
 const categories = {
   spring: {
-    keywords: 'spring fashion, light jacket, floral dress, pastel',
+    keywords:
+      'labubu spring fashion, light jacket, floral dress, pastel colors, spring outfit',
     description: 'Fresh spring styles with light fabrics and pastel colors',
   },
   summer: {
-    keywords: 'summer fashion, tank top, shorts, swimwear, bright',
+    keywords:
+      'labubu summer fashion, tank top, shorts, swimwear, bright colors, summer outfit',
     description:
       'Cool summer essentials with bright colors and breathable fabrics',
   },
   fall: {
-    keywords: 'fall fashion, sweater, jeans, earth tones',
+    keywords: 'labubu fall fashion, sweater, jeans, earth tones, fall outfit',
     description:
       'Cozy fall collection with warm earth tones and comfortable fabrics',
   },
   winter: {
-    keywords: 'winter fashion, coat, scarf, dark colors',
+    keywords: 'labubu winter fashion, coat, scarf, dark colors, winter outfit',
     description: 'Warm winter styles with dark colors and cozy materials',
   },
   fashion: {
-    keywords: 'fashion, trendy, stylish',
+    keywords: 'labubu fashion, trendy, stylish, casual outfit',
     description: 'Latest fashion trends and stylish pieces',
+  },
+  luxury: {
+    keywords:
+      'louis vuitton, prada, gucci, chanel, hermes, luxury fashion, designer clothes',
+    description: 'Premium designer fashion and luxury brands',
+  },
+  labubu: {
+    keywords:
+      'labubu, labubu outfit, labubu fashion, labubu clothes, labubu style',
+    description: 'Exclusive Labubu brand fashion and accessories',
   },
 };
 

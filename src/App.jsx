@@ -357,7 +357,15 @@ function Home({ onAddToCart, onAddToWishlist, wishlistItems }) {
           id="shop-section"
           className="flex flex-wrap gap-4 justify-center mb-8"
         >
-          {['All', 'Spring', 'Summer', 'Fall', 'Winter'].map((season) => (
+          {[
+            'All',
+            'Spring',
+            'Summer',
+            'Fall',
+            'Winter',
+            'Luxury',
+            'Labubu',
+          ].map((season) => (
             <button
               key={season}
               onClick={() => setSelectedSeason(season.toLowerCase())}
@@ -477,7 +485,15 @@ function Shop({ onAddToCart, onAddToWishlist, wishlistItems }) {
                 onChange={(e) => setSelectedSeason(e.target.value)}
                 className="input-field"
               >
-                {['Spring', 'Summer', 'Fall', 'Winter', 'All'].map((season) => (
+                {[
+                  'Spring',
+                  'Summer',
+                  'Fall',
+                  'Winter',
+                  'Luxury',
+                  'Labubu',
+                  'All',
+                ].map((season) => (
                   <option key={season} value={season.toLowerCase()}>
                     {season}
                   </option>

@@ -5,10 +5,9 @@ const axios = require('axios');
 const crypto = require('crypto');
 
 class AliExpressAPI {
-  constructor(appKey, appSecret, accessToken) {
+  constructor(appKey, appSecret) {
     this.appKey = appKey;
     this.appSecret = appSecret;
-    this.accessToken = accessToken;
     this.baseURL = 'https://api.aliexpress.com/v2/';
   }
 
@@ -210,8 +209,7 @@ class AliExpressAPI {
 // Example usage
 const aliexpressAPI = new AliExpressAPI(
   process.env.ALIEXPRESS_APP_KEY,
-  process.env.ALIEXPRESS_APP_SECRET,
-  process.env.ALIEXPRESS_ACCESS_TOKEN
+  process.env.ALIEXPRESS_APP_SECRET
 );
 
 module.exports = AliExpressAPI;
