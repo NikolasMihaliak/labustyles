@@ -15,6 +15,176 @@ const aliexpressAPI = new AliExpressAPI(
   process.env.ALIEXPRESS_APP_SECRET
 );
 
+// Check if AliExpress credentials are configured
+const hasAliExpressCredentials =
+  process.env.ALIEXPRESS_APP_KEY && process.env.ALIEXPRESS_APP_SECRET;
+if (!hasAliExpressCredentials) {
+  console.warn(
+    '⚠️  AliExpress credentials not found. Add ALIEXPRESS_APP_KEY and ALIEXPRESS_APP_SECRET environment variables.'
+  );
+}
+
+// Mock product data for fallback
+const mockProducts = {
+  spring: [
+    {
+      product_id: 'mock_spring_1',
+      product_title: 'Labubu Spring Floral Dress',
+      sale_price: 29.99,
+      original_price: 45.0,
+      product_main_image:
+        'https://via.placeholder.com/300x400/FFB6C1/000000?text=Spring+Dress',
+      product_description:
+        'Beautiful floral spring dress perfect for the season',
+      category_name: 'Spring',
+      evaluate_rate: 4.5,
+      evaluate_count: 128,
+    },
+    {
+      product_id: 'mock_spring_2',
+      product_title: 'Labubu Pastel Cardigan',
+      sale_price: 34.99,
+      original_price: 52.0,
+      product_main_image:
+        'https://via.placeholder.com/300x400/98FB98/000000?text=Pastel+Cardigan',
+      product_description: 'Soft pastel cardigan for spring days',
+      category_name: 'Spring',
+      evaluate_rate: 4.3,
+      evaluate_count: 95,
+    },
+  ],
+  summer: [
+    {
+      product_id: 'mock_summer_1',
+      product_title: 'Labubu Summer Tank Top',
+      sale_price: 19.99,
+      original_price: 28.0,
+      product_main_image:
+        'https://via.placeholder.com/300x400/87CEEB/000000?text=Summer+Tank',
+      product_description: 'Comfortable summer tank top',
+      category_name: 'Summer',
+      evaluate_rate: 4.2,
+      evaluate_count: 156,
+    },
+    {
+      product_id: 'mock_summer_2',
+      product_title: 'Labubu Beach Shorts',
+      sale_price: 24.99,
+      original_price: 35.0,
+      product_main_image:
+        'https://via.placeholder.com/300x400/F0E68C/000000?text=Beach+Shorts',
+      product_description: 'Stylish beach shorts for summer',
+      category_name: 'Summer',
+      evaluate_rate: 4.4,
+      evaluate_count: 89,
+    },
+  ],
+  fall: [
+    {
+      product_id: 'mock_fall_1',
+      product_title: 'Labubu Fall Sweater',
+      sale_price: 39.99,
+      original_price: 58.0,
+      product_main_image:
+        'https://via.placeholder.com/300x400/D2691E/FFFFFF?text=Fall+Sweater',
+      product_description: 'Cozy fall sweater in earth tones',
+      category_name: 'Fall',
+      evaluate_rate: 4.6,
+      evaluate_count: 203,
+    },
+    {
+      product_id: 'mock_fall_2',
+      product_title: 'Labubu Autumn Jeans',
+      sale_price: 44.99,
+      original_price: 65.0,
+      product_main_image:
+        'https://via.placeholder.com/300x400/8B4513/FFFFFF?text=Autumn+Jeans',
+      product_description: 'Comfortable autumn jeans',
+      category_name: 'Fall',
+      evaluate_rate: 4.1,
+      evaluate_count: 167,
+    },
+  ],
+  winter: [
+    {
+      product_id: 'mock_winter_1',
+      product_title: 'Labubu Winter Coat',
+      sale_price: 89.99,
+      original_price: 120.0,
+      product_main_image:
+        'https://via.placeholder.com/300x400/2F4F4F/FFFFFF?text=Winter+Coat',
+      product_description: 'Warm winter coat for cold days',
+      category_name: 'Winter',
+      evaluate_rate: 4.7,
+      evaluate_count: 312,
+    },
+    {
+      product_id: 'mock_winter_2',
+      product_title: 'Labubu Scarf Set',
+      sale_price: 29.99,
+      original_price: 42.0,
+      product_main_image:
+        'https://via.placeholder.com/300x400/696969/FFFFFF?text=Scarf+Set',
+      product_description: 'Warm scarf set for winter',
+      category_name: 'Winter',
+      evaluate_rate: 4.3,
+      evaluate_count: 178,
+    },
+  ],
+  fashion: [
+    {
+      product_id: 'mock_fashion_1',
+      product_title: 'Labubu Trendy Blouse',
+      sale_price: 34.99,
+      original_price: 48.0,
+      product_main_image:
+        'https://via.placeholder.com/300x400/9370DB/FFFFFF?text=Trendy+Blouse',
+      product_description: 'Trendy blouse for fashion-forward looks',
+      category_name: 'Fashion',
+      evaluate_rate: 4.4,
+      evaluate_count: 245,
+    },
+    {
+      product_id: 'mock_fashion_2',
+      product_title: 'Labubu Stylish Pants',
+      sale_price: 49.99,
+      original_price: 72.0,
+      product_main_image:
+        'https://via.placeholder.com/300x400/20B2AA/FFFFFF?text=Stylish+Pants',
+      product_description: 'Stylish pants for any occasion',
+      category_name: 'Fashion',
+      evaluate_rate: 4.2,
+      evaluate_count: 189,
+    },
+  ],
+  luxury: [
+    {
+      product_id: 'mock_luxury_1',
+      product_title: 'Louis Vuitton Inspired Bag',
+      sale_price: 299.99,
+      original_price: 450.0,
+      product_main_image:
+        'https://via.placeholder.com/300x400/FFD700/000000?text=LV+Bag',
+      product_description: 'Luxury inspired handbag',
+      category_name: 'Luxury',
+      evaluate_rate: 4.8,
+      evaluate_count: 89,
+    },
+    {
+      product_id: 'mock_luxury_2',
+      product_title: 'Prada Inspired Sunglasses',
+      sale_price: 199.99,
+      original_price: 280.0,
+      product_main_image:
+        'https://via.placeholder.com/300x400/C0C0C0/000000?text=Prada+Sunglasses',
+      product_description: 'Designer inspired sunglasses',
+      category_name: 'Luxury',
+      evaluate_rate: 4.6,
+      evaluate_count: 67,
+    },
+  ],
+};
+
 // Product Categories for LabuStyles
 const categories = {
   spring: {
@@ -79,25 +249,69 @@ app.get('/api/products/category/:category', async (req, res) => {
       });
     }
 
-    const keywords = categories[category].keywords;
-    const result = await aliexpressAPI.searchProducts(
-      keywords,
-      '',
-      parseInt(page),
-      parseInt(pageSize)
-    );
+    // Check if AliExpress credentials are available
+    if (!hasAliExpressCredentials) {
+      console.log('Using mock data - AliExpress credentials not configured');
+      const mockData = mockProducts[category] || [];
+      return res.json({
+        success: true,
+        category,
+        products: mockData,
+        total: mockData.length,
+        page: parseInt(page),
+        pageSize: parseInt(pageSize),
+        using_mock_data: true,
+      });
+    }
 
+    try {
+      const keywords = categories[category].keywords;
+      const result = await aliexpressAPI.searchProducts(
+        keywords,
+        '',
+        parseInt(page),
+        parseInt(pageSize)
+      );
+
+      res.json({
+        success: true,
+        category,
+        products: result.products || [],
+        total: result.total_results || 0,
+        page: parseInt(page),
+        pageSize: parseInt(pageSize),
+        using_mock_data: false,
+      });
+    } catch (apiError) {
+      console.error(
+        'AliExpress API error, falling back to mock data:',
+        apiError
+      );
+      const mockData = mockProducts[category] || [];
+      res.json({
+        success: true,
+        category,
+        products: mockData,
+        total: mockData.length,
+        page: parseInt(page),
+        pageSize: parseInt(pageSize),
+        using_mock_data: true,
+        api_error: apiError.message,
+      });
+    }
+  } catch (error) {
+    console.error('Error in products endpoint:', error);
+    const mockData = mockProducts[category] || [];
     res.json({
       success: true,
       category,
-      products: result.products || [],
-      total: result.total_results || 0,
+      products: mockData,
+      total: mockData.length,
       page: parseInt(page),
       pageSize: parseInt(pageSize),
+      using_mock_data: true,
+      error: error.message,
     });
-  } catch (error) {
-    console.error('Error searching products by category:', error);
-    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -113,24 +327,80 @@ app.get('/api/products/search', async (req, res) => {
       });
     }
 
-    const result = await aliexpressAPI.searchProducts(
-      q,
-      '',
-      parseInt(page),
-      parseInt(pageSize)
-    );
+    // Check if AliExpress credentials are available
+    if (!hasAliExpressCredentials) {
+      console.log(
+        'Using mock data for search - AliExpress credentials not configured'
+      );
+      // Return mock data that matches the search query
+      const allMockProducts = Object.values(mockProducts).flat();
+      const filteredProducts = allMockProducts.filter((product) =>
+        product.product_title.toLowerCase().includes(q.toLowerCase())
+      );
+      return res.json({
+        success: true,
+        query: q,
+        products: filteredProducts,
+        total: filteredProducts.length,
+        page: parseInt(page),
+        pageSize: parseInt(pageSize),
+        using_mock_data: true,
+      });
+    }
 
+    try {
+      const result = await aliexpressAPI.searchProducts(
+        q,
+        '',
+        parseInt(page),
+        parseInt(pageSize)
+      );
+
+      res.json({
+        success: true,
+        query: q,
+        products: result.products || [],
+        total: result.total_results || 0,
+        page: parseInt(page),
+        pageSize: parseInt(pageSize),
+        using_mock_data: false,
+      });
+    } catch (apiError) {
+      console.error(
+        'AliExpress API error, falling back to mock data:',
+        apiError
+      );
+      const allMockProducts = Object.values(mockProducts).flat();
+      const filteredProducts = allMockProducts.filter((product) =>
+        product.product_title.toLowerCase().includes(q.toLowerCase())
+      );
+      res.json({
+        success: true,
+        query: q,
+        products: filteredProducts,
+        total: filteredProducts.length,
+        page: parseInt(page),
+        pageSize: parseInt(pageSize),
+        using_mock_data: true,
+        api_error: apiError.message,
+      });
+    }
+  } catch (error) {
+    console.error('Error in search endpoint:', error);
+    const allMockProducts = Object.values(mockProducts).flat();
+    const filteredProducts = allMockProducts.filter((product) =>
+      product.product_title.toLowerCase().includes(q.toLowerCase())
+    );
     res.json({
       success: true,
       query: q,
-      products: result.products || [],
-      total: result.total_results || 0,
+      products: filteredProducts,
+      total: filteredProducts.length,
       page: parseInt(page),
       pageSize: parseInt(pageSize),
+      using_mock_data: true,
+      error: error.message,
     });
-  } catch (error) {
-    console.error('Error searching products:', error);
-    res.status(500).json({ success: false, error: error.message });
   }
 });
 

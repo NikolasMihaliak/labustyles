@@ -28,6 +28,11 @@ class AliExpressAPI {
   // Search for products
   async searchProducts(keywords, category = '', page = 1, pageSize = 20) {
     try {
+      // Check if credentials are available
+      if (!this.appKey || !this.appSecret) {
+        throw new Error('AliExpress credentials not configured');
+      }
+
       const params = {
         method: 'aliexpress.ds.product.search',
         app_key: this.appKey,
@@ -52,7 +57,20 @@ class AliExpressAPI {
         throw new Error(response.data.error_response.msg);
       }
 
-      return response.data.aliexpress_ds_product_search_response.result;
+      // Check if the expected response structure exists
+      if (!response.data.aliexpress_ds_product_search_response) {
+        throw new Error('Invalid API response structure');
+      }
+
+      const result = response.data.aliexpress_ds_product_search_response.result;
+
+      // Return a safe structure even if result is undefined
+      return {
+        products: result?.products || [],
+        total_results: result?.total_results || 0,
+        page_no: page,
+        page_size: pageSize,
+      };
     } catch (error) {
       console.error('Error searching products:', error);
       throw error;
