@@ -1,6 +1,6 @@
 // API service for LabuStyles AliExpress integration
 
-const API_BASE_URL = 'https://your-backend-url.com/api'; // Update this with your deployed backend URL
+const API_BASE_URL = 'https://labustyles.onrender.com/api'; // Render backend URL
 
 export const apiService = {
   // Get all categories
