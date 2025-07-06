@@ -731,11 +731,15 @@ app.get('/debug/credentials', (req, res) => {
   res.json({
     has_app_key: !!process.env.ALIEXPRESS_APP_KEY,
     has_app_secret: !!process.env.ALIEXPRESS_APP_SECRET,
+    has_access_token: !!process.env.ALIEXPRESS_ACCESS_TOKEN,
     app_key_length: process.env.ALIEXPRESS_APP_KEY
       ? process.env.ALIEXPRESS_APP_KEY.length
       : 0,
     app_secret_length: process.env.ALIEXPRESS_APP_SECRET
       ? process.env.ALIEXPRESS_APP_SECRET.length
+      : 0,
+    access_token_length: process.env.ALIEXPRESS_ACCESS_TOKEN
+      ? process.env.ALIEXPRESS_ACCESS_TOKEN.length
       : 0,
     app_key_preview: process.env.ALIEXPRESS_APP_KEY
       ? `${process.env.ALIEXPRESS_APP_KEY.substring(0, 8)}...`
@@ -743,6 +747,11 @@ app.get('/debug/credentials', (req, res) => {
     app_secret_preview: process.env.ALIEXPRESS_APP_SECRET
       ? `${process.env.ALIEXPRESS_APP_SECRET.substring(0, 8)}...`
       : 'Not set',
+    access_token_preview: process.env.ALIEXPRESS_ACCESS_TOKEN
+      ? `${process.env.ALIEXPRESS_ACCESS_TOKEN.substring(0, 8)}...`
+      : 'Not set',
+    oauth_redirect_url: `https://labustyles.onrender.com/auth/redirect`,
+    oauth_callback_url: `https://labustyles.onrender.com/auth/callback`,
   });
 });
 
