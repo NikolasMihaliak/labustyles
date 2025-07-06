@@ -526,6 +526,26 @@ app.get('/my-ip', async (req, res) => {
   }
 });
 
+// Debug endpoint to check AliExpress credentials
+app.get('/debug/credentials', (req, res) => {
+  res.json({
+    has_app_key: !!process.env.ALIEXPRESS_APP_KEY,
+    has_app_secret: !!process.env.ALIEXPRESS_APP_SECRET,
+    app_key_length: process.env.ALIEXPRESS_APP_KEY
+      ? process.env.ALIEXPRESS_APP_KEY.length
+      : 0,
+    app_secret_length: process.env.ALIEXPRESS_APP_SECRET
+      ? process.env.ALIEXPRESS_APP_SECRET.length
+      : 0,
+    app_key_preview: process.env.ALIEXPRESS_APP_KEY
+      ? `${process.env.ALIEXPRESS_APP_KEY.substring(0, 8)}...`
+      : 'Not set',
+    app_secret_preview: process.env.ALIEXPRESS_APP_SECRET
+      ? `${process.env.ALIEXPRESS_APP_SECRET.substring(0, 8)}...`
+      : 'Not set',
+  });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({
