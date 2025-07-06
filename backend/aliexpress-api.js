@@ -52,8 +52,16 @@ class AliExpressAPI {
       params.sign = this.generateSignature(params);
 
       const response = await axios.get(this.baseURL, { params });
+      console.log(
+        'AliExpress API raw response:',
+        JSON.stringify(response.data, null, 2)
+      );
 
       if (response.data.error_response) {
+        console.error(
+          'AliExpress API error_response:',
+          response.data.error_response
+        );
         throw new Error(response.data.error_response.msg);
       }
 
