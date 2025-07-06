@@ -28,10 +28,20 @@ class AliExpressAPI {
   // Search for products
   async searchProducts(keywords, category = '', page = 1, pageSize = 20) {
     try {
+      console.log('🚀 AliExpress API: Starting product search...');
+
       // Check if credentials are available
       if (!this.appKey || !this.appSecret) {
+        console.log('❌ AliExpress API: Credentials missing');
+        console.log('🔑 APP_KEY:', this.appKey ? 'Present' : 'Missing');
+        console.log('🔑 APP_SECRET:', this.appSecret ? 'Present' : 'Missing');
         throw new Error('AliExpress credentials not configured');
       }
+
+      console.log('✅ AliExpress API: Credentials found');
+      console.log('🔍 Keywords:', keywords);
+      console.log('📄 Page:', page);
+      console.log('📊 PageSize:', pageSize);
 
       const params = {
         method: 'aliexpress.ds.product.search',
@@ -51,15 +61,23 @@ class AliExpressAPI {
 
       params.sign = this.generateSignature(params);
 
+      console.log('🌐 AliExpress API: Making request to:', this.baseURL);
+      console.log('📋 Request params:', JSON.stringify(params, null, 2));
+
       const response = await axios.get(this.baseURL, { params });
+
+      console.log('📡 AliExpress API: Response received');
+      console.log('📊 Response status:', response.status);
+      console.log('📄 Response headers:', response.headers);
+
       console.log(
-        'AliExpress API raw response:',
+        '📦 AliExpress API raw response:',
         JSON.stringify(response.data, null, 2)
       );
 
       if (response.data.error_response) {
         console.error(
-          'AliExpress API error_response:',
+          '❌ AliExpress API error_response:',
           response.data.error_response
         );
         throw new Error(response.data.error_response.msg);
@@ -67,10 +85,14 @@ class AliExpressAPI {
 
       // Check if the expected response structure exists
       if (!response.data.aliexpress_ds_product_search_response) {
+        console.error('❌ AliExpress API: Invalid response structure');
+        console.error('Response data:', response.data);
         throw new Error('Invalid API response structure');
       }
 
       const result = response.data.aliexpress_ds_product_search_response.result;
+      console.log('✅ AliExpress API: Successfully parsed response');
+      console.log('📦 Products found:', result?.products?.length || 0);
 
       // Return a safe structure even if result is undefined
       return {
@@ -80,7 +102,16 @@ class AliExpressAPI {
         page_size: pageSize,
       };
     } catch (error) {
-      console.error('Error searching products:', error);
+      console.error('❌ AliExpress API: Error searching products:');
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response data:', error.response.data);
+        console.error('Response headers:', error.response.headers);
+      }
+
       throw error;
     }
   }

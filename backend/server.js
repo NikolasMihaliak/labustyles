@@ -245,6 +245,9 @@ app.get('/api/products/category/:category', async (req, res) => {
     const { category } = req.params;
     const { page = 1, pageSize = 20 } = req.query;
 
+    console.log(`🔍 API Request: /api/products/category/${category}`);
+    console.log(`📊 Page: ${page}, PageSize: ${pageSize}`);
+
     if (!categories[category]) {
       return res.status(400).json({
         success: false,
@@ -254,7 +257,9 @@ app.get('/api/products/category/:category', async (req, res) => {
 
     // Check if AliExpress credentials are available
     if (!hasAliExpressCredentials()) {
-      console.log('Using mock data - AliExpress credentials not configured');
+      console.log('❌ Using mock data - AliExpress credentials not configured');
+      console.log('🔑 APP_KEY exists:', !!process.env.ALIEXPRESS_APP_KEY);
+      console.log('🔑 APP_SECRET exists:', !!process.env.ALIEXPRESS_APP_SECRET);
       const mockData = mockProducts[category] || [];
       return res.json({
         success: true,
@@ -267,14 +272,29 @@ app.get('/api/products/category/:category', async (req, res) => {
       });
     }
 
+    console.log('✅ AliExpress credentials found, attempting API call...');
+    console.log(
+      '🔑 APP_KEY:',
+      process.env.ALIEXPRESS_APP_KEY ? 'Set' : 'Missing'
+    );
+    console.log(
+      '🔑 APP_SECRET:',
+      process.env.ALIEXPRESS_APP_SECRET ? 'Set' : 'Missing'
+    );
+
     try {
       const keywords = categories[category].keywords;
+      console.log('🔍 Searching with keywords:', keywords);
+
       const result = await aliexpressAPI.searchProducts(
         keywords,
         '',
         parseInt(page),
         parseInt(pageSize)
       );
+
+      console.log('✅ AliExpress API call successful');
+      console.log('📦 Products returned:', result.products?.length || 0);
 
       res.json({
         success: true,
@@ -286,10 +306,10 @@ app.get('/api/products/category/:category', async (req, res) => {
         using_mock_data: false,
       });
     } catch (apiError) {
-      console.error(
-        'AliExpress API error, falling back to mock data:',
-        apiError
-      );
+      console.error('❌ AliExpress API error, falling back to mock data:');
+      console.error('Error details:', apiError.message);
+      console.error('Full error:', apiError);
+
       const mockData = mockProducts[category] || [];
       res.json({
         success: true,
@@ -303,7 +323,7 @@ app.get('/api/products/category/:category', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Error in products endpoint:', error);
+    console.error('❌ Error in products endpoint:', error);
     const mockData = mockProducts[category] || [];
     res.json({
       success: true,
