@@ -546,6 +546,67 @@ app.get('/debug/credentials', (req, res) => {
   });
 });
 
+// Test endpoint for AliExpress API connectivity
+app.get('/test/aliexpress', async (req, res) => {
+  try {
+    console.log('🧪 Testing AliExpress API connectivity...');
+
+    // Try a simple API call to test connectivity
+    const params = {
+      method: 'aliexpress.ds.category.get',
+      app_key: process.env.ALIEXPRESS_APP_KEY,
+      timestamp: new Date().toISOString(),
+      format: 'json',
+      v: '2.0',
+      sign_method: 'sha256',
+      target_currency: 'USD',
+      target_language: 'EN',
+    };
+
+    // Generate signature
+    const sortedParams = Object.keys(params)
+      .sort()
+      .map((key) => `${key}${params[key]}`)
+      .join('');
+
+    const crypto = require('crypto');
+    params.sign = crypto
+      .createHmac('sha256', process.env.ALIEXPRESS_APP_SECRET)
+      .update(sortedParams)
+      .digest('hex')
+      .toUpperCase();
+
+    console.log('🌐 Making test API call to AliExpress...');
+    console.log('📋 Test params:', JSON.stringify(params, null, 2));
+
+    const axios = require('axios');
+    const response = await axios.get('https://api.aliexpress.com/v2/', {
+      params,
+    });
+
+    console.log('📡 Test response received');
+    console.log('📊 Test response status:', response.status);
+    console.log(
+      '📦 Test response data:',
+      JSON.stringify(response.data, null, 2)
+    );
+
+    res.json({
+      success: true,
+      message: 'AliExpress API test successful',
+      response: response.data,
+    });
+  } catch (error) {
+    console.error('❌ AliExpress API test failed:', error.message);
+    res.json({
+      success: false,
+      message: 'AliExpress API test failed',
+      error: error.message,
+      response_data: error.response?.data,
+    });
+  }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({
