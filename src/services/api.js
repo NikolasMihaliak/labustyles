@@ -1,6 +1,6 @@
 // API service for LabuStyles AliExpress integration
 
-const API_BASE_URL = 'http://localhost:5000/api'; // Change this to your deployed backend URL
+const API_BASE_URL = 'https://your-backend-url.com/api'; // Update this with your deployed backend URL
 
 export const apiService = {
   // Get all categories
@@ -95,6 +95,9 @@ export const apiService = {
       return data.success;
     } catch (error) {
       console.error('Backend health check failed:', error);
+      console.log(
+        'Using mock products - deploy backend to see real AliExpress products'
+      );
       return false;
     }
   },
