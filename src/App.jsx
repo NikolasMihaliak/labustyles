@@ -3,6 +3,8 @@ import { products as mockProducts, categories } from './data/products';
 import ProductCard from './components/ProductCard';
 import HeroBanner from './components/HeroBanner';
 import { apiService, transformAliExpressProduct } from './services/api';
+import './App.css';
+import './custom.css';
 
 const NAV = [
   { name: 'Home', id: 'home', icon: '🏠' },
@@ -157,6 +159,7 @@ function SearchResults({
               onAddToCart={onAddToCart}
               onAddToWishlist={onAddToWishlist}
               isInWishlist={wishlistItems.includes(product.id)}
+              aliexpressStatus="disconnected"
             />
           ))}
         </div>
@@ -165,7 +168,40 @@ function SearchResults({
   );
 }
 
-function Navbar({ cartCount, onOpenSearch }) {
+function Navbar({
+  cartCount,
+  onOpenSearch,
+  aliexpressStatus,
+  onConnectAliExpress,
+}) {
+  const getStatusMessage = () => {
+    switch (aliexpressStatus) {
+      case 'disconnected':
+        return 'Connect AliExpress';
+      case 'connecting':
+        return 'Connecting...';
+      case 'connected':
+        return '✅ Connected';
+      case 'error':
+        return '❌ Error';
+      default:
+        return 'Checking...';
+    }
+  };
+
+  const getStatusColor = () => {
+    switch (aliexpressStatus) {
+      case 'connected':
+        return 'text-green-600';
+      case 'error':
+        return 'text-red-600';
+      case 'connecting':
+        return 'text-blue-600';
+      default:
+        return 'text-gray-600';
+    }
+  };
+
   return (
     <header className="main-navbar">
       <div className="main-navbar-top">
@@ -176,6 +212,23 @@ function Navbar({ cartCount, onOpenSearch }) {
         </div>
         <div className="nav-logo">LabuStyles</div>
         <div className="nav-actions">
+          {/* AliExpress Connection Status */}
+          <div className="flex items-center space-x-2 mr-4">
+            <span className={`text-sm ${getStatusColor()}`}>
+              {getStatusMessage()}
+            </span>
+            {aliexpressStatus === 'disconnected' && (
+              <button
+                onClick={onConnectAliExpress}
+                className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-xs font-medium transition-colors duration-200"
+              >
+                Connect
+              </button>
+            )}
+            {aliexpressStatus === 'connecting' && (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-500"></div>
+            )}
+          </div>
           <button
             className="nav-icon"
             aria-label="Search"
@@ -244,6 +297,7 @@ function HorizontalProductSection({
   onAddToCart,
   onAddToWishlist,
   wishlistItems,
+  aliexpressStatus = 'disconnected',
 }) {
   const [page, setPage] = useState(0);
   const pageSize = 6;
@@ -270,6 +324,7 @@ function HorizontalProductSection({
             onAddToCart={onAddToCart}
             onAddToWishlist={onAddToWishlist}
             isInWishlist={wishlistItems.includes(product.id)}
+            aliexpressStatus={aliexpressStatus}
           />
         ))}
       </div>
@@ -312,7 +367,12 @@ function HorizontalProductSection({
   );
 }
 
-function Home({ onAddToCart, onAddToWishlist, wishlistItems }) {
+function Home({
+  onAddToCart,
+  onAddToWishlist,
+  wishlistItems,
+  aliexpressStatus = 'disconnected',
+}) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSeason, setSelectedSeason] = useState('all');
   const [aliExpressProducts, setAliExpressProducts] = useState([]);
@@ -481,6 +541,7 @@ function Home({ onAddToCart, onAddToWishlist, wishlistItems }) {
               onAddToCart={onAddToCart}
               onAddToWishlist={onAddToWishlist}
               wishlistItems={wishlistItems}
+              aliexpressStatus={aliexpressStatus}
             />
           </div>
         ) : (
@@ -495,6 +556,7 @@ function Home({ onAddToCart, onAddToWishlist, wishlistItems }) {
               onAddToCart={onAddToCart}
               onAddToWishlist={onAddToWishlist}
               wishlistItems={wishlistItems}
+              aliexpressStatus={aliexpressStatus}
             />
           </div>
         )}
@@ -503,7 +565,12 @@ function Home({ onAddToCart, onAddToWishlist, wishlistItems }) {
   );
 }
 
-function Shop({ onAddToCart, onAddToWishlist, wishlistItems }) {
+function Shop({
+  onAddToCart,
+  onAddToWishlist,
+  wishlistItems,
+  aliexpressStatus = 'disconnected',
+}) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedSeason, setSelectedSeason] = useState('all');
@@ -626,6 +693,7 @@ function Shop({ onAddToCart, onAddToWishlist, wishlistItems }) {
                 onAddToCart={onAddToCart}
                 onAddToWishlist={onAddToWishlist}
                 isInWishlist={wishlistItems.includes(product.id)}
+                aliexpressStatus={aliexpressStatus}
               />
             ))}
           </div>
@@ -784,43 +852,105 @@ export default function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchPageQuery, setSearchPageQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('spring');
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [aliexpressStatus, setAliExpressStatus] = useState('disconnected'); // 'disconnected', 'connecting', 'connected', 'error'
 
-  const addToCart = (productId) => {
-    const product = products.find((p) => p.id === productId);
-    if (!product) return;
+  useEffect(() => {
+    loadCategories();
+    checkAliExpressStatus();
+  }, []);
 
-    setCartItems((prev) => {
-      const existingItem = prev.find((item) => item.id === productId);
-      if (existingItem) {
-        return prev.map((item) =>
-          item.id === productId
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      } else {
-        return [...prev, { ...product, quantity: 1 }];
-      }
-    });
-  };
+  useEffect(() => {
+    loadProducts(selectedCategory);
+  }, [selectedCategory]);
 
-  const updateCartQuantity = (productId, newQuantity) => {
-    if (newQuantity <= 0) {
-      removeFromCart(productId);
-      return;
+  const loadCategories = async () => {
+    try {
+      const categoriesData = await apiService.getCategories();
+      setCategories(categoriesData);
+    } catch (error) {
+      console.error('Error loading categories:', error);
     }
-    setCartItems((prev) =>
-      prev.map((item) =>
-        item.id === productId ? { ...item, quantity: newQuantity } : item
-      )
-    );
   };
 
-  const removeFromCart = (productId) => {
-    setCartItems((prev) => prev.filter((item) => item.id !== productId));
+  const loadProducts = async (category) => {
+    setLoading(true);
+    try {
+      const result = await apiService.getProductsByCategory(category);
+      setProducts(result.products || []);
+    } catch (error) {
+      console.error('Error loading products:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const clearCart = () => {
-    setCartItems([]);
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+    setLoading(true);
+    try {
+      const result = await apiService.searchProducts(searchQuery);
+      setProducts(result.products || []);
+    } catch (error) {
+      console.error('Error searching products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const checkAliExpressStatus = async () => {
+    try {
+      // Check if we have any access tokens by trying to get order status
+      // This is a simple way to check if OAuth is completed
+      setAliExpressStatus('checking');
+      // For now, we'll just check if the backend is reachable
+      const health = await apiService.healthCheck();
+      if (health) {
+        setAliExpressStatus('disconnected'); // Backend is up but no OAuth yet
+      } else {
+        setAliExpressStatus('error');
+      }
+    } catch (error) {
+      setAliExpressStatus('error');
+    }
+  };
+
+  const connectToAliExpress = () => {
+    setAliExpressStatus('connecting');
+    // Redirect to our backend OAuth endpoint
+    window.location.href = 'https://labustyles.onrender.com/auth/redirect';
+  };
+
+  const getStatusMessage = () => {
+    switch (aliexpressStatus) {
+      case 'disconnected':
+        return 'Connect your AliExpress account to place orders';
+      case 'connecting':
+        return 'Connecting to AliExpress...';
+      case 'connected':
+        return '✅ Connected to AliExpress - You can place orders!';
+      case 'error':
+        return '❌ Connection error - Please try again';
+      default:
+        return 'Checking connection...';
+    }
+  };
+
+  const getStatusColor = () => {
+    switch (aliexpressStatus) {
+      case 'connected':
+        return 'text-green-600';
+      case 'error':
+        return 'text-red-600';
+      case 'connecting':
+        return 'text-blue-600';
+      default:
+        return 'text-gray-600';
+    }
   };
 
   return (
@@ -830,6 +960,8 @@ export default function App() {
         setCurrent={setCurrent}
         cartCount={cartItems.length}
         onOpenSearch={() => setIsSearchOpen(true)}
+        aliexpressStatus={aliexpressStatus}
+        onConnectAliExpress={connectToAliExpress}
       />
       <SearchModal
         isOpen={isSearchOpen}
@@ -842,7 +974,7 @@ export default function App() {
       {showSearchResults ? (
         <SearchResults
           query={searchPageQuery}
-          onAddToCart={addToCart}
+          onAddToCart={() => {}}
           onAddToWishlist={() => {}}
           wishlistItems={[]}
           onBack={() => setShowSearchResults(false)}
@@ -851,24 +983,36 @@ export default function App() {
         <>
           {current === 'home' && (
             <Home
-              onAddToCart={addToCart}
+              onAddToCart={() => {}}
               onAddToWishlist={() => {}}
               wishlistItems={[]}
+              aliexpressStatus={aliexpressStatus}
             />
           )}
           {current === 'shop' && (
             <Shop
-              onAddToCart={addToCart}
+              onAddToCart={() => {}}
               onAddToWishlist={() => {}}
               wishlistItems={[]}
+              aliexpressStatus={aliexpressStatus}
             />
           )}
           {current === 'cart' && (
             <Cart
               cartItems={cartItems}
-              onUpdateQuantity={updateCartQuantity}
-              onRemoveItem={removeFromCart}
-              onClearCart={clearCart}
+              onUpdateQuantity={(id, quantity) => {
+                setCartItems((prev) =>
+                  prev.map((item) =>
+                    item.id === id ? { ...item, quantity } : item
+                  )
+                );
+              }}
+              onRemoveItem={(id) => {
+                setCartItems((prev) => prev.filter((item) => item.id !== id));
+              }}
+              onClearCart={() => {
+                setCartItems([]);
+              }}
             />
           )}
           {current === 'account' && <Account />}

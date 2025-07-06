@@ -527,12 +527,10 @@ app.post('/api/orders', async (req, res) => {
     // Get access token (in real app, use user session)
     const access_token = getAnyAccessToken();
     if (!access_token) {
-      return res
-        .status(401)
-        .json({
-          success: false,
-          error: 'AliExpress not authorized. Please connect your account.',
-        });
+      return res.status(401).json({
+        success: false,
+        error: 'AliExpress not authorized. Please connect your account.',
+      });
     }
     const orderData = {
       productId,
@@ -559,12 +557,10 @@ app.get('/api/orders/:orderId', async (req, res) => {
     const { orderId } = req.params;
     const access_token = getAnyAccessToken();
     if (!access_token) {
-      return res
-        .status(401)
-        .json({
-          success: false,
-          error: 'AliExpress not authorized. Please connect your account.',
-        });
+      return res.status(401).json({
+        success: false,
+        error: 'AliExpress not authorized. Please connect your account.',
+      });
     }
     const result = await aliexpressAPI.getOrderStatus(orderId, access_token);
     res.json({
@@ -583,12 +579,10 @@ app.get('/api/orders/:orderId/tracking', async (req, res) => {
     const { orderId } = req.params;
     const access_token = getAnyAccessToken();
     if (!access_token) {
-      return res
-        .status(401)
-        .json({
-          success: false,
-          error: 'AliExpress not authorized. Please connect your account.',
-        });
+      return res.status(401).json({
+        success: false,
+        error: 'AliExpress not authorized. Please connect your account.',
+      });
     }
     const result = await aliexpressAPI.getTrackingInfo(orderId, access_token);
     res.json({

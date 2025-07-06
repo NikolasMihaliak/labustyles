@@ -1,6 +1,10 @@
 import { useState } from 'react';
 
-export default function ProductCard({ product, onAddToCart }) {
+export default function ProductCard({
+  product,
+  onAddToCart,
+  aliexpressStatus = 'disconnected',
+}) {
   const [imgIdx, setImgIdx] = useState(0);
   const images =
     Array.isArray(product.images) && product.images.length > 0
@@ -92,10 +96,25 @@ export default function ProductCard({ product, onAddToCart }) {
             e.stopPropagation();
             onAddToCart(product.id);
           }}
-          disabled={!product.inStock}
-          className="add-btn modern"
+          disabled={!product.inStock || aliexpressStatus !== 'connected'}
+          className={`add-btn modern ${
+            aliexpressStatus !== 'connected'
+              ? 'opacity-50 cursor-not-allowed'
+              : ''
+          }`}
+          title={
+            aliexpressStatus !== 'connected'
+              ? 'Connect to AliExpress to place orders'
+              : product.inStock
+              ? 'Add to Cart'
+              : 'Out of Stock'
+          }
         >
-          {product.inStock ? 'Add to Cart' : 'Out of Stock'}
+          {aliexpressStatus !== 'connected'
+            ? 'Connect to Order'
+            : product.inStock
+            ? 'Add to Cart'
+            : 'Out of Stock'}
         </button>
       </div>
     </div>
