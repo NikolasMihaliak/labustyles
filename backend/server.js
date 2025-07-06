@@ -233,10 +233,12 @@ const REDIRECT_URI =
 
 // 1. Redirect user to AliExpress for authorization
 app.get('/auth/redirect', (req, res) => {
+  console.log('🔗 OAuth redirect endpoint called');
   const state = Math.random().toString(36).substring(2, 15); // random state for CSRF protection
   const authUrl = `https://auth.aliexpress.com/oauth2/authorize?app_id=${APP_KEY}&redirect_uri=${encodeURIComponent(
     REDIRECT_URI
   )}&site=aliexpress&state=${state}`;
+  console.log('🔗 Redirecting to:', authUrl);
   res.redirect(authUrl);
 });
 
