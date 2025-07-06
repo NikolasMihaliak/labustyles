@@ -21,9 +21,20 @@ const hasAliExpressCredentials = () => {
   return process.env.ALIEXPRESS_APP_KEY && process.env.ALIEXPRESS_APP_SECRET;
 };
 
+// Check if admin access token is available for AliExpress orders
+const hasAdminAccessToken = () => {
+  return process.env.ALIEXPRESS_ACCESS_TOKEN;
+};
+
 if (!hasAliExpressCredentials()) {
   console.warn(
     '⚠️  AliExpress credentials not found. Add ALIEXPRESS_APP_KEY and ALIEXPRESS_APP_SECRET environment variables.'
+  );
+}
+
+if (!hasAdminAccessToken()) {
+  console.warn(
+    '⚠️  AliExpress admin access token not found. Add ALIEXPRESS_ACCESS_TOKEN environment variable for automated ordering.'
   );
 }
 
@@ -516,40 +527,135 @@ app.get('/api/products/:productId', async (req, res) => {
   }
 });
 
-// Place order
+// Place order - Updated for customer checkout flow
 app.post('/api/orders', async (req, res) => {
   try {
-    const { productId, quantity, shippingAddress, buyerMessage } = req.body;
-    if (!productId || !quantity || !shippingAddress) {
+    const { items, customer, total, shippingAddress } = req.body;
+
+    if (!items || !customer || !shippingAddress) {
       return res.status(400).json({
         success: false,
         error: 'Missing required fields',
       });
     }
-    // Get access token (in real app, use user session)
-    const access_token = getAnyAccessToken();
-    if (!access_token) {
-      return res.status(401).json({
-        success: false,
-        error: 'AliExpress not authorized. Please connect your account.',
-      });
-    }
-    const orderData = {
-      productId,
-      quantity: parseInt(quantity),
+
+    console.log('🛒 Processing customer order:', {
+      customerEmail: customer.email,
+      itemCount: items.length,
+      total: total,
+    });
+
+    // Generate a unique order ID
+    const orderId = `LABU-${Date.now()}-${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+
+    // Store order in memory (in production, use a database)
+    const order = {
+      id: orderId,
+      customer,
+      items,
+      total,
       shippingAddress,
-      buyerMessage: buyerMessage || '',
-      access_token,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      aliexpressOrders: [],
     };
-    const result = await aliexpressAPI.placeOrder(orderData);
+
+    // Store order (in production, save to database)
+    if (!global.orders) global.orders = [];
+    global.orders.push(order);
+
+    // Process each item through AliExpress (if credentials are available)
+    if (hasAliExpressCredentials()) {
+      console.log('✅ AliExpress credentials available, processing orders...');
+
+      for (const item of items) {
+        try {
+          // Use admin access token for AliExpress orders
+          const adminAccessToken = process.env.ALIEXPRESS_ACCESS_TOKEN;
+
+          if (!adminAccessToken) {
+            console.log(
+              '⚠️ No admin access token available, skipping AliExpress order'
+            );
+            continue;
+          }
+
+          const orderData = {
+            productId: item.productId,
+            quantity: item.quantity,
+            shippingAddress: {
+              firstName: shippingAddress.firstName,
+              lastName: shippingAddress.lastName,
+              address: shippingAddress.address,
+              city: shippingAddress.city,
+              state: shippingAddress.state,
+              zipCode: shippingAddress.zipCode,
+              country: shippingAddress.country,
+              phone: shippingAddress.phone,
+            },
+            buyerMessage: `LabuStyles Order: ${orderId}`,
+            access_token: adminAccessToken,
+          };
+
+          console.log(
+            `📦 Placing AliExpress order for product ${item.productId}`
+          );
+          const aliexpressResult = await aliexpressAPI.placeOrder(orderData);
+
+          // Store AliExpress order reference
+          order.aliexpressOrders.push({
+            productId: item.productId,
+            aliexpressOrderId: aliexpressResult.order_id || aliexpressResult.id,
+            status: 'placed',
+            placedAt: new Date().toISOString(),
+          });
+
+          console.log(
+            `✅ AliExpress order placed successfully:`,
+            aliexpressResult
+          );
+        } catch (aliexpressError) {
+          console.error(
+            `❌ Failed to place AliExpress order for product ${item.productId}:`,
+            aliexpressError
+          );
+
+          // Store failed order attempt
+          order.aliexpressOrders.push({
+            productId: item.productId,
+            error: aliexpressError.message,
+            status: 'failed',
+            failedAt: new Date().toISOString(),
+          });
+        }
+      }
+    } else {
+      console.log(
+        '❌ AliExpress credentials not available, order stored for manual processing'
+      );
+    }
+
+    // Send confirmation email (in production, implement email service)
+    console.log(`📧 Order confirmation would be sent to: ${customer.email}`);
+
     res.json({
       success: true,
-      order: result,
-      message: 'Order placed successfully',
+      order: {
+        id: orderId,
+        status: 'confirmed',
+        message:
+          'Order placed successfully. We will process and ship your items soon.',
+        aliexpressOrders: order.aliexpressOrders,
+      },
     });
   } catch (error) {
-    console.error('Error placing order:', error);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('❌ Error processing order:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to process order. Please try again.',
+    });
   }
 });
 
@@ -557,17 +663,28 @@ app.post('/api/orders', async (req, res) => {
 app.get('/api/orders/:orderId', async (req, res) => {
   try {
     const { orderId } = req.params;
-    const access_token = getAnyAccessToken();
-    if (!access_token) {
-      return res.status(401).json({
+
+    // Find order in memory (in production, query database)
+    const order = global.orders?.find((o) => o.id === orderId);
+
+    if (!order) {
+      return res.status(404).json({
         success: false,
-        error: 'AliExpress not authorized. Please connect your account.',
+        error: 'Order not found',
       });
     }
-    const result = await aliexpressAPI.getOrderStatus(orderId, access_token);
+
     res.json({
       success: true,
-      order: result,
+      order: {
+        id: order.id,
+        customer: order.customer,
+        items: order.items,
+        total: order.total,
+        status: order.status,
+        createdAt: order.createdAt,
+        aliexpressOrders: order.aliexpressOrders,
+      },
     });
   } catch (error) {
     console.error('Error getting order status:', error);
@@ -575,24 +692,26 @@ app.get('/api/orders/:orderId', async (req, res) => {
   }
 });
 
-// Get tracking information
-app.get('/api/orders/:orderId/tracking', async (req, res) => {
+// Get all orders (admin endpoint)
+app.get('/api/admin/orders', async (req, res) => {
   try {
-    const { orderId } = req.params;
-    const access_token = getAnyAccessToken();
-    if (!access_token) {
-      return res.status(401).json({
-        success: false,
-        error: 'AliExpress not authorized. Please connect your account.',
-      });
-    }
-    const result = await aliexpressAPI.getTrackingInfo(orderId, access_token);
+    // In production, add authentication/authorization
+    const orders = global.orders || [];
+
     res.json({
       success: true,
-      tracking: result,
+      orders: orders.map((order) => ({
+        id: order.id,
+        customer: order.customer,
+        items: order.items,
+        total: order.total,
+        status: order.status,
+        createdAt: order.createdAt,
+        aliexpressOrders: order.aliexpressOrders,
+      })),
     });
   } catch (error) {
-    console.error('Error getting tracking info:', error);
+    console.error('Error getting orders:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

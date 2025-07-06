@@ -159,7 +159,6 @@ function SearchResults({
               onAddToCart={onAddToCart}
               onAddToWishlist={onAddToWishlist}
               isInWishlist={wishlistItems.includes(product.id)}
-              aliexpressStatus="disconnected"
             />
           ))}
         </div>
@@ -168,67 +167,47 @@ function SearchResults({
   );
 }
 
-function Navbar({
-  cartCount,
-  onOpenSearch,
-  aliexpressStatus,
-  onConnectAliExpress,
-}) {
-  const getStatusMessage = () => {
-    switch (aliexpressStatus) {
-      case 'disconnected':
-        return 'Connect AliExpress';
-      case 'connecting':
-        return 'Connecting...';
-      case 'connected':
-        return '✅ Connected';
-      case 'error':
-        return '❌ Error';
-      default:
-        return 'Checking...';
-    }
-  };
-
-  const getStatusColor = () => {
-    switch (aliexpressStatus) {
-      case 'connected':
-        return 'text-green-600';
-      case 'error':
-        return 'text-red-600';
-      case 'connecting':
-        return 'text-blue-600';
-      default:
-        return 'text-gray-600';
-    }
-  };
-
+function Navbar({ current, setCurrent, cartCount, onOpenSearch }) {
   return (
     <header className="main-navbar">
       <div className="main-navbar-top">
         <div className="nav-left">
-          <button className="nav-hamburger" aria-label="Menu">
+          <button
+            className="nav-hamburger"
+            aria-label="Menu"
+            onClick={() => setCurrent('home')}
+          >
             ☰
           </button>
+          <div className="nav-logo">LabuStyles</div>
         </div>
-        <div className="nav-logo">LabuStyles</div>
+        <nav className="nav-menu">
+          <button
+            className={`nav-link ${current === 'home' ? 'active' : ''}`}
+            onClick={() => setCurrent('home')}
+          >
+            Home
+          </button>
+          <button
+            className={`nav-link ${current === 'shop' ? 'active' : ''}`}
+            onClick={() => setCurrent('shop')}
+          >
+            Shop
+          </button>
+          <button
+            className={`nav-link ${current === 'cart' ? 'active' : ''}`}
+            onClick={() => setCurrent('cart')}
+          >
+            Cart
+          </button>
+          <button
+            className={`nav-link ${current === 'account' ? 'active' : ''}`}
+            onClick={() => setCurrent('account')}
+          >
+            Account
+          </button>
+        </nav>
         <div className="nav-actions">
-          {/* AliExpress Connection Status */}
-          <div className="flex items-center space-x-2 mr-4">
-            <span className={`text-sm ${getStatusColor()}`}>
-              {getStatusMessage()}
-            </span>
-            {aliexpressStatus === 'disconnected' && (
-              <button
-                onClick={onConnectAliExpress}
-                className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-xs font-medium transition-colors duration-200"
-              >
-                Connect
-              </button>
-            )}
-            {aliexpressStatus === 'connecting' && (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-500"></div>
-            )}
-          </div>
           <button
             className="nav-icon"
             aria-label="Search"
@@ -297,7 +276,6 @@ function HorizontalProductSection({
   onAddToCart,
   onAddToWishlist,
   wishlistItems,
-  aliexpressStatus = 'disconnected',
 }) {
   const [page, setPage] = useState(0);
   const pageSize = 6;
@@ -324,7 +302,6 @@ function HorizontalProductSection({
             onAddToCart={onAddToCart}
             onAddToWishlist={onAddToWishlist}
             isInWishlist={wishlistItems.includes(product.id)}
-            aliexpressStatus={aliexpressStatus}
           />
         ))}
       </div>
@@ -367,12 +344,7 @@ function HorizontalProductSection({
   );
 }
 
-function Home({
-  onAddToCart,
-  onAddToWishlist,
-  wishlistItems,
-  aliexpressStatus = 'disconnected',
-}) {
+function Home({ onAddToCart, onAddToWishlist, wishlistItems }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSeason, setSelectedSeason] = useState('all');
   const [aliExpressProducts, setAliExpressProducts] = useState([]);
@@ -541,7 +513,6 @@ function Home({
               onAddToCart={onAddToCart}
               onAddToWishlist={onAddToWishlist}
               wishlistItems={wishlistItems}
-              aliexpressStatus={aliexpressStatus}
             />
           </div>
         ) : (
@@ -556,7 +527,6 @@ function Home({
               onAddToCart={onAddToCart}
               onAddToWishlist={onAddToWishlist}
               wishlistItems={wishlistItems}
-              aliexpressStatus={aliexpressStatus}
             />
           </div>
         )}
@@ -565,12 +535,7 @@ function Home({
   );
 }
 
-function Shop({
-  onAddToCart,
-  onAddToWishlist,
-  wishlistItems,
-  aliexpressStatus = 'disconnected',
-}) {
+function Shop({ onAddToCart, onAddToWishlist, wishlistItems }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedSeason, setSelectedSeason] = useState('all');
@@ -693,7 +658,6 @@ function Shop({
                 onAddToCart={onAddToCart}
                 onAddToWishlist={onAddToWishlist}
                 isInWishlist={wishlistItems.includes(product.id)}
-                aliexpressStatus={aliexpressStatus}
               />
             ))}
           </div>
@@ -722,10 +686,80 @@ function Shop({
 }
 
 function Cart({ cartItems, onUpdateQuantity, onRemoveItem, onClearCart }) {
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [checkoutForm, setCheckoutForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    country: 'US',
+    paymentMethod: 'card',
+  });
+  const [orderStatus, setOrderStatus] = useState(null);
+
   const total = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
+
+  const handleCheckout = async () => {
+    setIsCheckingOut(true);
+    setOrderStatus('processing');
+
+    try {
+      // Create order data
+      const orderData = {
+        items: cartItems.map((item) => ({
+          productId: item.id,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        customer: checkoutForm,
+        total: total,
+        shippingAddress: {
+          firstName: checkoutForm.firstName,
+          lastName: checkoutForm.lastName,
+          address: checkoutForm.address,
+          city: checkoutForm.city,
+          state: checkoutForm.state,
+          zipCode: checkoutForm.zipCode,
+          country: checkoutForm.country,
+          phone: checkoutForm.phone,
+        },
+      };
+
+      // Call backend to place order
+      const response = await fetch(
+        'https://labustyles.onrender.com/api/orders',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(orderData),
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        setOrderStatus('success');
+        // Clear cart after successful order
+        onClearCart();
+      } else {
+        setOrderStatus('error');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      setOrderStatus('error');
+    } finally {
+      setIsCheckingOut(false);
+    }
+  };
 
   if (cartItems.length === 0) {
     return (
@@ -744,9 +778,26 @@ function Cart({ cartItems, onUpdateQuantity, onRemoveItem, onClearCart }) {
     );
   }
 
+  if (orderStatus === 'success') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
+        <div className="empty-state">
+          <div className="empty-state-icon">✅</div>
+          <h2 className="empty-state-title">Order Placed Successfully!</h2>
+          <p className="empty-state-description">
+            Thank you for your order. We'll process it and ship it to you soon.
+          </p>
+          <button onClick={() => setCurrent('home')} className="btn-primary">
+            Continue Shopping
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container-responsive max-w-4xl">
+      <div className="container-responsive max-w-6xl">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Shopping Cart</h1>
           <button
@@ -757,74 +808,254 @@ function Cart({ cartItems, onUpdateQuantity, onRemoveItem, onClearCart }) {
           </button>
         </div>
 
-        <div className="space-y-4 mb-8">
-          {cartItems.map((item) => (
-            <div key={item.id} className="card p-6">
-              <div className="flex items-center gap-6">
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="w-24 h-24 object-cover rounded-lg"
-                />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg text-gray-900 mb-1">
-                    {item.name}
-                  </h3>
-                  <p className="text-primary-blue font-bold text-lg">
-                    ${item.price}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() =>
-                        onUpdateQuantity(item.id, item.quantity - 1)
-                      }
-                      disabled={item.quantity <= 1}
-                      className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center disabled:opacity-50 hover:bg-gray-200 transition-colors"
-                    >
-                      -
-                    </button>
-                    <span className="w-12 text-center font-semibold">
-                      {item.quantity}
-                    </span>
-                    <button
-                      onClick={() =>
-                        onUpdateQuantity(item.id, item.quantity + 1)
-                      }
-                      className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
-                    >
-                      +
-                    </button>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-lg">
-                      ${(item.price * item.quantity).toFixed(2)}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Cart Items */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              Cart Items
+            </h2>
+            {cartItems.map((item) => (
+              <div key={item.id} className="card p-6">
+                <div className="flex items-center gap-6">
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="w-24 h-24 object-cover rounded-lg"
+                  />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg text-gray-900 mb-1">
+                      {item.name}
+                    </h3>
+                    <p className="text-primary-blue font-bold text-lg">
+                      ${item.price}
                     </p>
-                    <button
-                      onClick={() => onRemoveItem(item.id)}
-                      className="text-red-600 hover:text-red-700 text-sm font-medium"
-                    >
-                      Remove
-                    </button>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() =>
+                          onUpdateQuantity(item.id, item.quantity - 1)
+                        }
+                        disabled={item.quantity <= 1}
+                        className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center disabled:opacity-50 hover:bg-gray-200 transition-colors"
+                      >
+                        -
+                      </button>
+                      <span className="w-12 text-center font-semibold">
+                        {item.quantity}
+                      </span>
+                      <button
+                        onClick={() =>
+                          onUpdateQuantity(item.id, item.quantity + 1)
+                        }
+                        className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-lg">
+                        ${(item.price * item.quantity).toFixed(2)}
+                      </p>
+                      <button
+                        onClick={() => onRemoveItem(item.id)}
+                        className="text-red-600 hover:text-red-700 text-sm font-medium"
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Checkout Section */}
-        <div className="card p-8">
-          <div className="flex justify-between items-center mb-6">
-            <span className="text-xl font-semibold text-gray-900">Total:</span>
-            <span className="text-3xl font-bold text-primary-blue">
-              ${total.toFixed(2)}
-            </span>
+            ))}
           </div>
-          <button className="w-full btn-primary py-4 text-lg">
-            Proceed to Checkout
-          </button>
+
+          {/* Checkout Form */}
+          <div className="card p-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">
+              Checkout Information
+            </h2>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    First Name
+                  </label>
+                  <input
+                    type="text"
+                    value={checkoutForm.firstName}
+                    onChange={(e) =>
+                      setCheckoutForm({
+                        ...checkoutForm,
+                        firstName: e.target.value,
+                      })
+                    }
+                    className="input-field"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Last Name
+                  </label>
+                  <input
+                    type="text"
+                    value={checkoutForm.lastName}
+                    onChange={(e) =>
+                      setCheckoutForm({
+                        ...checkoutForm,
+                        lastName: e.target.value,
+                      })
+                    }
+                    className="input-field"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={checkoutForm.email}
+                  onChange={(e) =>
+                    setCheckoutForm({ ...checkoutForm, email: e.target.value })
+                  }
+                  className="input-field"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone
+                </label>
+                <input
+                  type="tel"
+                  value={checkoutForm.phone}
+                  onChange={(e) =>
+                    setCheckoutForm({ ...checkoutForm, phone: e.target.value })
+                  }
+                  className="input-field"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Address
+                </label>
+                <input
+                  type="text"
+                  value={checkoutForm.address}
+                  onChange={(e) =>
+                    setCheckoutForm({
+                      ...checkoutForm,
+                      address: e.target.value,
+                    })
+                  }
+                  className="input-field"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    value={checkoutForm.city}
+                    onChange={(e) =>
+                      setCheckoutForm({ ...checkoutForm, city: e.target.value })
+                    }
+                    className="input-field"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    State
+                  </label>
+                  <input
+                    type="text"
+                    value={checkoutForm.state}
+                    onChange={(e) =>
+                      setCheckoutForm({
+                        ...checkoutForm,
+                        state: e.target.value,
+                      })
+                    }
+                    className="input-field"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    ZIP Code
+                  </label>
+                  <input
+                    type="text"
+                    value={checkoutForm.zipCode}
+                    onChange={(e) =>
+                      setCheckoutForm({
+                        ...checkoutForm,
+                        zipCode: e.target.value,
+                      })
+                    }
+                    className="input-field"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Order Summary */}
+            <div className="border-t border-gray-200 mt-6 pt-6">
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-lg font-semibold text-gray-900">
+                  Subtotal:
+                </span>
+                <span className="text-lg font-semibold text-gray-900">
+                  ${total.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-gray-600">Shipping:</span>
+                <span className="text-gray-600">Free</span>
+              </div>
+              <div className="flex justify-between items-center mb-6 border-t border-gray-200 pt-4">
+                <span className="text-xl font-bold text-gray-900">Total:</span>
+                <span className="text-2xl font-bold text-primary-blue">
+                  ${total.toFixed(2)}
+                </span>
+              </div>
+
+              {orderStatus === 'error' && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+                  There was an error processing your order. Please try again.
+                </div>
+              )}
+
+              <button
+                onClick={handleCheckout}
+                disabled={
+                  isCheckingOut ||
+                  !checkoutForm.firstName ||
+                  !checkoutForm.lastName ||
+                  !checkoutForm.email ||
+                  !checkoutForm.address
+                }
+                className="w-full btn-primary py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isCheckingOut ? 'Processing Order...' : 'Place Order'}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -832,14 +1063,182 @@ function Cart({ cartItems, onUpdateQuantity, onRemoveItem, onClearCart }) {
 }
 
 function Account() {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    try {
+      const response = await fetch(
+        'https://labustyles.onrender.com/api/admin/orders'
+      );
+      const data = await response.json();
+      if (data.success) {
+        setOrders(data.orders);
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container-responsive max-w-4xl">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Account</h1>
+      <div className="container-responsive max-w-6xl">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">
+          Admin Dashboard
+        </h1>
+
         <div className="card p-8">
-          <p className="text-gray-600 text-center">
-            Account management coming soon...
-          </p>
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">
+            Recent Orders
+          </h2>
+
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="text-lg">Loading orders...</div>
+            </div>
+          ) : orders.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="text-lg text-gray-600">No orders yet</div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {orders.map((order) => (
+                <div
+                  key={order.id}
+                  className="border border-gray-200 rounded-lg p-6"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Order {order.id}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        {formatDate(order.createdAt)}
+                      </p>
+                    </div>
+                    <span
+                      className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        order.status === 'confirmed'
+                          ? 'bg-green-100 text-green-800'
+                          : order.status === 'pending'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      {order.status}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2">
+                        Customer
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        {order.customer.firstName} {order.customer.lastName}
+                        <br />
+                        {order.customer.email}
+                        <br />
+                        {order.customer.phone}
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2">
+                        Shipping Address
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        {order.shippingAddress.address}
+                        <br />
+                        {order.shippingAddress.city},{' '}
+                        {order.shippingAddress.state}{' '}
+                        {order.shippingAddress.zipCode}
+                        <br />
+                        {order.shippingAddress.country}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <h4 className="font-medium text-gray-900 mb-2">Items</h4>
+                    <div className="space-y-2">
+                      {order.items.map((item, index) => (
+                        <div
+                          key={index}
+                          className="flex justify-between text-sm"
+                        >
+                          <span>
+                            Product ID: {item.productId} (Qty: {item.quantity})
+                          </span>
+                          <span className="font-medium">
+                            ${(item.price * item.quantity).toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-1">
+                        AliExpress Orders
+                      </h4>
+                      <div className="text-sm text-gray-600">
+                        {order.aliexpressOrders.length > 0 ? (
+                          order.aliexpressOrders.map(
+                            (aliexpressOrder, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center gap-2"
+                              >
+                                <span
+                                  className={`w-2 h-2 rounded-full ${
+                                    aliexpressOrder.status === 'placed'
+                                      ? 'bg-green-500'
+                                      : aliexpressOrder.status === 'failed'
+                                      ? 'bg-red-500'
+                                      : 'bg-gray-500'
+                                  }`}
+                                ></span>
+                                <span>
+                                  Product {aliexpressOrder.productId}:{' '}
+                                  {aliexpressOrder.status}
+                                  {aliexpressOrder.aliexpressOrderId &&
+                                    ` (ID: ${aliexpressOrder.aliexpressOrderId})`}
+                                </span>
+                              </div>
+                            )
+                          )
+                        ) : (
+                          <span>No AliExpress orders placed</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-primary-blue">
+                        ${order.total.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -857,11 +1256,9 @@ export default function App() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [aliexpressStatus, setAliExpressStatus] = useState('disconnected'); // 'disconnected', 'connecting', 'connected', 'error'
 
   useEffect(() => {
     loadCategories();
-    checkAliExpressStatus();
   }, []);
 
   useEffect(() => {
@@ -902,57 +1299,6 @@ export default function App() {
     }
   };
 
-  const checkAliExpressStatus = async () => {
-    try {
-      // Check if we have any access tokens by trying to get order status
-      // This is a simple way to check if OAuth is completed
-      setAliExpressStatus('checking');
-      // For now, we'll just check if the backend is reachable
-      const health = await apiService.healthCheck();
-      if (health) {
-        setAliExpressStatus('disconnected'); // Backend is up but no OAuth yet
-      } else {
-        setAliExpressStatus('error');
-      }
-    } catch (error) {
-      setAliExpressStatus('error');
-    }
-  };
-
-  const connectToAliExpress = () => {
-    setAliExpressStatus('connecting');
-    // Redirect to our backend OAuth endpoint
-    window.location.href = 'https://labustyles.onrender.com/auth/redirect';
-  };
-
-  const getStatusMessage = () => {
-    switch (aliexpressStatus) {
-      case 'disconnected':
-        return 'Connect your AliExpress account to place orders';
-      case 'connecting':
-        return 'Connecting to AliExpress...';
-      case 'connected':
-        return '✅ Connected to AliExpress - You can place orders!';
-      case 'error':
-        return '❌ Connection error - Please try again';
-      default:
-        return 'Checking connection...';
-    }
-  };
-
-  const getStatusColor = () => {
-    switch (aliexpressStatus) {
-      case 'connected':
-        return 'text-green-600';
-      case 'error':
-        return 'text-red-600';
-      case 'connecting':
-        return 'text-blue-600';
-      default:
-        return 'text-gray-600';
-    }
-  };
-
   return (
     <div className="site-container">
       <Navbar
@@ -960,8 +1306,6 @@ export default function App() {
         setCurrent={setCurrent}
         cartCount={cartItems.length}
         onOpenSearch={() => setIsSearchOpen(true)}
-        aliexpressStatus={aliexpressStatus}
-        onConnectAliExpress={connectToAliExpress}
       />
       <SearchModal
         isOpen={isSearchOpen}
@@ -986,7 +1330,6 @@ export default function App() {
               onAddToCart={() => {}}
               onAddToWishlist={() => {}}
               wishlistItems={[]}
-              aliexpressStatus={aliexpressStatus}
             />
           )}
           {current === 'shop' && (
@@ -994,7 +1337,6 @@ export default function App() {
               onAddToCart={() => {}}
               onAddToWishlist={() => {}}
               wishlistItems={[]}
-              aliexpressStatus={aliexpressStatus}
             />
           )}
           {current === 'cart' && (
