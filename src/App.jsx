@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { products, categories } from './data/products';
+import { products as mockProducts, categories } from './data/products';
 import ProductCard from './components/ProductCard';
 import HeroBanner from './components/HeroBanner';
+import { apiService, transformAliExpressProduct } from './services/api';
 
 const NAV = [
   { name: 'Home', id: 'home', icon: '🏠' },
@@ -60,11 +61,51 @@ function SearchResults({
   wishlistItems,
   onBack,
 }) {
-  const results = products.filter(
-    (product) =>
-      product.name.toLowerCase().includes(query.toLowerCase()) ||
-      product.description.toLowerCase().includes(query.toLowerCase())
-  );
+  const [searchResults, setSearchResults] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const performSearch = async () => {
+      try {
+        setLoading(true);
+        const result = await apiService.searchProducts(query, 1, 20);
+        if (result.products && result.products.length > 0) {
+          const transformedResults = result.products.map(
+            transformAliExpressProduct
+          );
+          setSearchResults(transformedResults);
+        } else {
+          // Fallback to mock products search
+          const mockResults = mockProducts.filter(
+            (product) =>
+              product.name.toLowerCase().includes(query.toLowerCase()) ||
+              product.description.toLowerCase().includes(query.toLowerCase())
+          );
+          setSearchResults(mockResults);
+        }
+      } catch (error) {
+        console.error('Search error:', error);
+        // Fallback to mock products search
+        const mockResults = mockProducts.filter(
+          (product) =>
+            product.name.toLowerCase().includes(query.toLowerCase()) ||
+            product.description.toLowerCase().includes(query.toLowerCase())
+        );
+        setSearchResults(mockResults);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (query.trim()) {
+      performSearch();
+    } else {
+      setSearchResults([]);
+      setLoading(false);
+    }
+  }, [query]);
+
+  const results = searchResults;
   return (
     <div className="container-responsive py-8 px-4 md:px-8">
       <button
@@ -101,7 +142,11 @@ function SearchResults({
         <span style={{ fontSize: '1.2em', marginRight: 8 }}>&larr;</span> Back
       </button>
       <h2 className="text-2xl font-bold mb-4">Search Results for "{query}"</h2>
-      {results.length === 0 ? (
+      {loading ? (
+        <div className="text-center py-8">
+          <div className="text-lg">Searching...</div>
+        </div>
+      ) : results.length === 0 ? (
         <div>No products found.</div>
       ) : (
         <div className="product-grid">
@@ -270,8 +315,52 @@ function HorizontalProductSection({
 function Home({ onAddToCart, onAddToWishlist, wishlistItems }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSeason, setSelectedSeason] = useState('all');
+  const [aliExpressProducts, setAliExpressProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const filteredProducts = products.filter((product) => {
+  // Fetch AliExpress products on component mount
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        // Check if backend is available
+        const isBackendHealthy = await apiService.healthCheck();
+
+        if (isBackendHealthy) {
+          // Fetch products from AliExpress API
+          const result = await apiService.getProductsByCategory(
+            'fashion',
+            1,
+            20
+          );
+          if (result.products && result.products.length > 0) {
+            const transformedProducts = result.products.map(
+              transformAliExpressProduct
+            );
+            setAliExpressProducts(transformedProducts);
+          } else {
+            // Fallback to mock products if no AliExpress products found
+            setAliExpressProducts(mockProducts);
+          }
+        } else {
+          // Fallback to mock products if backend is not available
+          setAliExpressProducts(mockProducts);
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        setError('Failed to load products');
+        // Fallback to mock products
+        setAliExpressProducts(mockProducts);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  const filteredProducts = aliExpressProducts.filter((product) => {
     const matchesSearch =
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -281,14 +370,18 @@ function Home({ onAddToCart, onAddToWishlist, wishlistItems }) {
   });
 
   const getProductsByCategory = (category) => {
-    return products
+    return aliExpressProducts
       .filter((product) => product.category === category)
       .slice(0, 10);
   };
 
-  const featuredProducts = products.filter((p) => p.rating >= 4.5).slice(0, 10);
-  const newArrivals = products.slice(-10);
-  const bestSellers = products.filter((p) => p.reviews > 200).slice(0, 10);
+  const featuredProducts = aliExpressProducts
+    .filter((p) => p.rating >= 4.5)
+    .slice(0, 10);
+  const newArrivals = aliExpressProducts.slice(-10);
+  const bestSellers = aliExpressProducts
+    .filter((p) => p.reviewCount > 200)
+    .slice(0, 10);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -357,32 +450,34 @@ function Home({ onAddToCart, onAddToWishlist, wishlistItems }) {
           id="shop-section"
           className="flex flex-wrap gap-4 justify-center mb-8"
         >
-          {[
-            'All',
-            'Spring',
-            'Summer',
-            'Fall',
-            'Winter',
-            'Luxury',
-            'Labubu',
-          ].map((season) => (
-            <button
-              key={season}
-              onClick={() => setSelectedSeason(season.toLowerCase())}
-              className={`season-btn ${season.toLowerCase()}${
-                selectedSeason === season.toLowerCase() ? ' active' : ''
-              }`}
-            >
-              {season}
-            </button>
-          ))}
+          {['All', 'Spring', 'Summer', 'Fall', 'Winter', 'Luxury'].map(
+            (season) => (
+              <button
+                key={season}
+                onClick={() => setSelectedSeason(season.toLowerCase())}
+                className={`season-btn ${season.toLowerCase()}${
+                  selectedSeason === season.toLowerCase() ? ' active' : ''
+                }`}
+              >
+                {season}
+              </button>
+            )
+          )}
         </div>
         {/* Products Section */}
-        {selectedSeason === 'all' ? (
+        {loading ? (
+          <div className="text-center py-8">
+            <div className="text-lg">Loading products...</div>
+          </div>
+        ) : error ? (
+          <div className="text-center py-8 text-red-600">
+            <div className="text-lg">{error}</div>
+          </div>
+        ) : selectedSeason === 'all' ? (
           <div>
             <HorizontalProductSection
               title="All Outfits"
-              products={products}
+              products={aliExpressProducts}
               onAddToCart={onAddToCart}
               onAddToWishlist={onAddToWishlist}
               wishlistItems={wishlistItems}
@@ -394,7 +489,9 @@ function Home({ onAddToCart, onAddToWishlist, wishlistItems }) {
               title={`${
                 selectedSeason.charAt(0).toUpperCase() + selectedSeason.slice(1)
               } Outfits`}
-              products={products.filter((p) => p.season === selectedSeason)}
+              products={aliExpressProducts.filter(
+                (p) => p.season === selectedSeason
+              )}
               onAddToCart={onAddToCart}
               onAddToWishlist={onAddToWishlist}
               wishlistItems={wishlistItems}
@@ -485,19 +582,13 @@ function Shop({ onAddToCart, onAddToWishlist, wishlistItems }) {
                 onChange={(e) => setSelectedSeason(e.target.value)}
                 className="input-field"
               >
-                {[
-                  'Spring',
-                  'Summer',
-                  'Fall',
-                  'Winter',
-                  'Luxury',
-                  'Labubu',
-                  'All',
-                ].map((season) => (
-                  <option key={season} value={season.toLowerCase()}>
-                    {season}
-                  </option>
-                ))}
+                {['Spring', 'Summer', 'Fall', 'Winter', 'Luxury', 'All'].map(
+                  (season) => (
+                    <option key={season} value={season.toLowerCase()}>
+                      {season}
+                    </option>
+                  )
+                )}
               </select>
             </div>
 

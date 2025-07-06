@@ -46,11 +46,6 @@ const categories = {
       'louis vuitton, prada, gucci, chanel, hermes, luxury fashion, designer clothes',
     description: 'Premium designer fashion and luxury brands',
   },
-  labubu: {
-    keywords:
-      'labubu, labubu outfit, labubu fashion, labubu clothes, labubu style',
-    description: 'Exclusive Labubu brand fashion and accessories',
-  },
 };
 
 // API Routes
