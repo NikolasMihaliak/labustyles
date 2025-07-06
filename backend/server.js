@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const AliExpressAPI = require('./aliexpress-api');
+const axios = require('axios');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -492,6 +493,16 @@ app.get('/api/orders/:orderId/tracking', async (req, res) => {
   } catch (error) {
     console.error('Error getting tracking info:', error);
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Endpoint to get the server's public IP address
+app.get('/my-ip', async (req, res) => {
+  try {
+    const ipRes = await axios.get('https://api.ipify.org?format=json');
+    res.json({ ip: ipRes.data.ip });
+  } catch (error) {
+    res.status(500).json({ error: 'Could not fetch public IP' });
   }
 });
 

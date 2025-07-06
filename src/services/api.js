@@ -1,6 +1,9 @@
 // API service for LabuStyles AliExpress integration
 
-const API_BASE_URL = 'https://labustyles.onrender.com/api'; // Render backend URL
+// Use environment-aware API URL
+const API_BASE_URL = import.meta.env.DEV
+  ? 'http://localhost:5000/api' // Local development
+  : 'https://labustyles.onrender.com/api'; // Production (Render)
 
 export const apiService = {
   // Get all categories
